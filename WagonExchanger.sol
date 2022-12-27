@@ -17,8 +17,9 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract WagonExchanger is Pausable, AccessControl {
+contract WagonExchanger is Pausable, AccessControl, ReentrancyGuard {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MOVER_ROLE = keccak256("MOVER_ROLE");
     bytes32 public constant PRICE_ROLE = keccak256("PRICE_ROLE");
@@ -153,7 +154,7 @@ contract WagonExchanger is Pausable, AccessControl {
     // Function to swap USD for WAG.
     // @param usdId ERC20 id for the saved ERC20 Stable coin
     // @param usdAmount Amount of usd about to be swap
-    function swapUsdForWag(uint256 usdId, uint256 usdAmount) external whenNotPaused whenStart {
+    function swapUsdForWag(uint256 usdId, uint256 usdAmount) external whenNotPaused whenStart nonReentrant {
         require(availableWagon() > 0, "No Wagon to distribute.");
 
         IERC20Metadata usdErc20 = usd[usdId];

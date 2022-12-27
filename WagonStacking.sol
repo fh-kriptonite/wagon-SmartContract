@@ -54,6 +54,9 @@ contract WagonStacking is Pausable, AccessControl, ReentrancyGuard {
     
     IERC20Metadata wagon;
 
+    address public treasuryAddress;
+    uint public distributionFee;
+
     event UpdateLockDate(uint lockDate);
     event EmergencyMoverERC20(address erc20, address to, uint256 amount);
     event Stake(uint256 period, address staker, uint256 amount);
@@ -63,6 +66,8 @@ contract WagonStacking is Pausable, AccessControl, ReentrancyGuard {
     event UpdateFirstLockTime(uint timestamp);
     event RemoveAutoCompound(address staker, uint period, uint256 amount);
     event Withdraw(address staker, uint256 amount);
+    event UpdateTreasuryAddress(address _address);
+    event UpdateDistributionFee(uint percentage);
 
     // Constructor.
     // Setting all the roles needed and set wagon token.
@@ -74,6 +79,14 @@ contract WagonStacking is Pausable, AccessControl, ReentrancyGuard {
         _grantRole(PROFIT_SHARE_ROLE, msg.sender);
 
         wagon = IERC20Metadata(_wagonAddress);
+    }
+
+    // Update Treasury Address.
+    // Set a new address to the treasurery account.
+    // @param _newTreasuryAddress new emergency address
+    function updateTreasuryAddress(address _newTreasuryAddress) public onlyRole(DEFAULT_ADMIN_ROLE){
+        treasuryAddress = _newTreasuryAddress;
+        emit UpdateTreasuryAddress(_newTreasuryAddress);
     }
 
     // Pause.
@@ -102,6 +115,15 @@ contract WagonStacking is Pausable, AccessControl, ReentrancyGuard {
     function updateFirstLockTime(uint _timestamp) public onlyRole(DEFAULT_ADMIN_ROLE) {
         firstLockTime = _timestamp;
         emit UpdateFirstLockTime(_timestamp);
+    }
+
+    // Update distribution fee.
+    // Update the distribution fee that will be taken when adding rewards.
+    // @param _percentage percentage of the fee that will be taken
+    function updateDistributionFee(uint _percentage) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_percentage < 30, "Fee cannot be more that 30%");
+        distributionFee = _percentage;
+        emit UpdateDistributionFee(_percentage);
     }
 
     // emergencyMoveERC20.
@@ -294,11 +316,21 @@ contract WagonStacking is Pausable, AccessControl, ReentrancyGuard {
         require(lockedPeriod > 0, "Staking period not yet started");
 
         require(wagon.balanceOf(msg.sender) >= _amountWagon, "Balance not enough.");
-        wagon.transferFrom(msg.sender, address(this), _amountWagon);
+
+        uint256 rewards = _amountWagon;
+        uint256 fee = 0;
+
+        if(distributionFee > 0) {
+            fee = rewards * distributionFee / 100;
+            rewards = rewards - fee;
+            wagon.transferFrom(msg.sender, treasuryAddress, fee);
+        }
+
+        wagon.transferFrom(msg.sender, address(this), rewards);
         
-        totalProfitShares[lockedPeriod] += _amountWagon;
+        totalProfitShares[lockedPeriod] += rewards;
         updateTotalLatestLocked();
-        emit DistributeProfitSharing(lockedPeriod, _amountWagon);
+        emit DistributeProfitSharing(lockedPeriod, rewards);
     }
 
     // getTotalUserWithdrawable.

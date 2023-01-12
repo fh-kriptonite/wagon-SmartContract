@@ -27,7 +27,7 @@ contract Wagon is ERC20, ERC20Burnable, ERC20Snapshot, AccessControl, Pausable, 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BLACKLISTER_ROLE = keccak256("BLACKLISTER_ROLE");
 
-    uint256 public constant INITIAL_SUPPLY = 1000000000;
+    uint256 public constant INITIAL_SUPPLY = 100000000;
     address public emergencyAccount;
 
     mapping (address => bool) public isBlackListed;
